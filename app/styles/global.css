@@ -1,0 +1,22 @@
+:root {
+  --custom-blue: #3b82f6;
+  --custom-red: #e11d48;
+  --custom-cyan: #22d3ee;
+  --custom-yellow: #fbbf24;
+  --custom-black: #000000;
+
+  --glow-color-1: var(--custom-blue);
+  --glow-color-2: var(--custom-red);
+  --glow-color-3: var(--custom-cyan);
+}
+
+body {
+  background-color: var(--custom-black);
+  color: white;
+  font-family: 'Inter', sans-serif;
+  /* font-family: 'Dosis', sans-serif; */
+}
+
+html, body {
+  height:100%;
+}

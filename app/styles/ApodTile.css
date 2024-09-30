@@ -1,0 +1,82 @@
+/* Wrapper as a grid container */
+.wrapper {
+  display: grid;
+  place-items: center; /* Center content within the grid */
+  position: relative;
+  width: 100vw;
+  min-height: 100vh; /* Full height for the starfield */
+  overflow: hidden;
+}
+
+/* Starfield is placed as the background */
+.wrapper canvas.starfield {
+  grid-area: 1 / 1; /* Starfield fills the grid */
+  z-index: 1; /* Behind the content */
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none; /* Ensure no interaction with the starfield */
+}
+
+/* Content (ApodTile and other elements) is above the starfield */
+.content {
+  grid-area: 1 / 1; /* Content on top of the starfield */
+  z-index: 2; /* Above the starfield */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  width: 100%;
+  max-width: 1200px;
+  color: white;
+  text-align: center;
+}
+
+.content h1 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.ApodTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.apod {
+  margin-bottom: 50px;
+  width: 80%;
+  max-width: 600px;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 20px;
+  backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease-in-out;
+}
+
+.apod img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+.apod button:focus {
+  outline: none;
+}
+
+.apod button::-moz-focus-inner {
+  border: 0;
+}
+
+/* Adjust ApodTile and APOD appearance on hover */
+.apod:hover {
+  transform: scale(1.05);
+}
