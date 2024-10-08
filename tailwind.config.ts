@@ -11,6 +11,9 @@ export default {
           'custom-yellow': 'var(--custom-yellow)',
           'custom-black': 'var(--custom-black)',
       },
+      textShadow: {
+        'space-heading': `-2px 2px 0 var(--custom-red), -4px 4px 0 var(--custom-orange), -6px 6px 0 var(--custom-red), -8px 8px 0 var(--custom-orange)`,
+      },
       fontFamily: {
         sans: [
           '"Inter"',
@@ -23,8 +26,11 @@ export default {
           '"Noto Color Emoji"',
         ],
         dosis: ['Dosis', 'sans-serif'],
+        MachineStd: ['MachineStd', 'sans-serif'],
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('tailwindcss-textshadow')
+  ],
 } satisfies Config;

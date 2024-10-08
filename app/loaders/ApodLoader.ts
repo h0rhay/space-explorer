@@ -44,21 +44,30 @@ export const loader: LoaderFunction = async () => {
 
   const fetchApod = async (date: string): Promise<ApodData | null> => {
     const url = `https://api.nasa.gov/planetary/apod?api_key=CqOPeA8mBVaYGNvzEf7vaWwW0jKi72eqJN1Bi0mA&date=${date}`;
-
-    return fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Error fetching APOD for ${date}`);
-        return res.json();
-      })
-      .then((apodData) => ({
-        ...apodData,
+  
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Error fetching APOD for ${date}`);
+      }
+      const apodData = await res.json();
+  
+      // Make sure apodData has the required fields to satisfy the ApodData interface
+      if (!apodData.url || !apodData.title || !apodData.explanation) {
+        return null; // Return null if any required field is missing
+      }
+  
+      return {
+        title: apodData.title,
         url: optimizeImageUrl(apodData.url, 800, 600), // Pass desired width/height for the image
-      }))
-      .catch((error) => {
-        console.error(`Error fetching APOD for ${date}:`, error);
-        return null;
-      });
+        explanation: apodData.explanation,
+      };
+    } catch (error) {
+      console.error(`Error fetching APOD for ${date}:`, error);
+      return null;
+    }
   };
+  
 
   const apods = await Promise.all(dates.map(fetchApod));
   const validApods = apods.filter((apod): apod is ApodData => apod !== null);

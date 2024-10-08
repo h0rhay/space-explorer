@@ -1,8 +1,9 @@
 :root {
   --custom-blue: #3b82f6;
-  --custom-red: #e11d48;
   --custom-cyan: #22d3ee;
-  --custom-yellow: #fbbf24;
+  --custom-red: #ef4444;
+  --custom-orange: #f97316;
+  --custom-yellow: #fde047;
   --custom-black: #000000;
 
   --glow-color-1: var(--custom-blue);

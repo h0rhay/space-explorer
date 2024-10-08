@@ -2,6 +2,7 @@ import { useLoaderData } from "@remix-run/react";
 import { loader } from "../loaders/ApodLoader"; // Import the loader from apodLoader
 import Starfield from "../components/Starfield";
 import ApodTile from "../components/ApodTile"; // ApodTile handles image and description rendering
+import SpaceFontHeading from "../components/SpaceFontHeading";
 
 // Define the loader return type for APOD data
 interface ApodData {
@@ -23,7 +24,7 @@ export default function Index() {
     <div className="wrapper">
       <Starfield starsCount={450} />
       <div className="content">
-        <h1 className="text-4xl font-dosis font-bold mb-6 text-white">APOD Timeline</h1>
+        <SpaceFontHeading>Space Explorers</SpaceFontHeading>
         <ApodTile apods={apods} /> {/* Render the ApodTile component which handles APODs */}
       </div>
     </div>
