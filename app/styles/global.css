@@ -14,8 +14,7 @@
 body {
   background-color: var(--custom-black);
   color: white;
-  font-family: 'Inter', sans-serif;
-  /* font-family: 'Dosis', sans-serif; */
+  font-family: 'Dosis', sans-serif;
 }
 
 html, body {

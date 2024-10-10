@@ -1,143 +1,270 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useLoaderData } from '@remix-run/react';
-import ApodImage from './ApodImage';
+
+
+// import React, { useState, useEffect, useRef, useCallback } from 'react'
+// import { useLoaderData } from '@remix-run/react'
+// import ApodImage from './ApodImage'
+
+// interface ApodTileProps {
+//   apods: ApodData[]
+// }
+
+// interface ApodData {
+//   title: string
+//   url: string
+//   explanation: string
+// }
+
+// interface LoaderData {
+//   apods: ApodData[]
+// }
+
+// const ApodTile: React.FC<ApodTileProps> = () => {
+//   const { apods } = useLoaderData<LoaderData>()
+//   const [activeIndex, setActiveIndex] = useState<number>(0) // Track active APOD
+//   const [revealedText, setRevealedText] = useState<string>('') // Track text for typewriter effect
+//   const [flyOffDirection, setFlyOffDirection] = useState<number>(1) // Track the direction of fly-off, starting with right
+//   const [verticalMoveDirection, setVerticalMoveDirection] = useState<number>(1) // Track up or down movement
+//   const tileRef = useRef<HTMLDivElement | null>(null) // Ref for tile DOM element
+//   const [timeline, setTimeline] = useState(0) // Track scroll timeline
+//   const requestRef = useRef<number | null>(null) // Track animation frame requests
+
+//   // Start typewriter effect (memoized)
+//   const startTypewriterEffect = useCallback((index: number) => {
+//     const explanation = apods[index].explanation
+//     let currentIndex = 0
+
+//     setRevealedText('') // Reset text
+
+//     const typingInterval = setInterval(() => {
+//       currentIndex++
+//       setRevealedText(explanation.slice(0, currentIndex))
+//       if (currentIndex === explanation.length) {
+//         clearInterval(typingInterval) // Clear the interval when typing is done
+//       }
+//     }, 10)
+//   }, [apods])
+
+//   // Handle the click event with ability to complete typing effect on click
+//   const handleClick = useCallback((index: number) => {
+//     startTypewriterEffect(index) // Trigger typing effect on click
+//   }, [startTypewriterEffect])
+
+//   // Restore scroll timeline behavior with gradual fly-out and slower APOD change
+//   const handleScroll = useCallback((e: WheelEvent) => {
+//     setTimeline((prev) => {
+//       const newTimeline = prev + e.deltaY * 0.1 // Slowed down the scroll speed
+//       const currentBaseScroll = activeIndex * 1000
+
+//       // Once the APOD fades out (progress exceeds 1), move to next APOD
+//       if (newTimeline > currentBaseScroll + 1000) {
+//         setActiveIndex((prevIndex) => {
+//           const newIndex = (prevIndex + 1) % apods.length
+//           setFlyOffDirection(newIndex % 2 === 0 ? 1 : -1) // Alternate direction for new APOD
+//           setVerticalMoveDirection(Math.random() > 0.5 ? 1 : -1) // Randomly move up or down
+//           return newIndex
+//         })
+//         return (activeIndex + 1) * 1000 // Reset timeline for new APOD
+//       }
+
+//       return newTimeline
+//     })
+//   }, [activeIndex, apods.length])
+
+//   // Cleanup animation frame requests on unmount
+//   useEffect(() => {
+//     return () => {
+//       if (requestRef.current) {
+//         cancelAnimationFrame(requestRef.current)
+//       }
+//     }
+//   }, [])
+
+//   // Add event listener for smooth scroll
+//   useEffect(() => {
+//     window.addEventListener('wheel', handleScroll)
+//     return () => window.removeEventListener('wheel', handleScroll)
+//   }, [handleScroll])
+
+//   // CSS transitions for smooth animations and opacity control
+//   const getTransformStyle = (index: number) => {
+//     const baseScroll = index * 1000
+//     const progress = (timeline - baseScroll) / 500
+
+//     // Scaling stops growing after opacity drops below 0.5
+//     let scale = progress >= 0.5 ? 1.3 : Math.min(1.3, progress + 0.5)
+//     const fadeOutStart = 0.8
+//     const opacity = progress >= fadeOutStart ? Math.max(1 - (progress - fadeOutStart), 0) : 1
+
+//     if (opacity <= 0.5) {
+//       scale = 1.3 // Stop growing when opacity is less than 0.5
+//     }
+
+//     // Slow down fly-off effect as the tile fades out
+//     const flyOffDistance = 500 // Reduce fly-off speed by reducing the distance
+//     const smoothFlyOff = Math.min(flyOffDistance * (progress - fadeOutStart), flyOffDistance)
+//     const translateX = progress >= fadeOutStart ? smoothFlyOff * flyOffDirection : 0
+//     const translateY = progress >= fadeOutStart ? verticalMoveDirection * 50 : 0
+
+//     return {
+//       transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+//       opacity: opacity,
+//       transition: 'transform 0.6s ease-in-out, opacity 0.6s ease-out', // Smooth transition
+//     }
+//   }
+
+//   const activeApod = apods[activeIndex]
+
+//   // Guard against empty apods array
+//   if (!apods || apods.length === 0) {
+//     return <div>No APOD data available.</div>
+//   }
+
+//   return (
+//     <div className="scroll-container">
+//       <div className="wrapper">
+//         <div className="content">
+//           <div
+//             key={activeIndex}
+//             className={`apod apod-${activeIndex}`}
+//             style={getTransformStyle(activeIndex)}
+//             onClick={() => handleClick(activeIndex)}
+//             tabIndex={0}
+//             onKeyDown={(e) => {
+//               if (e.key === 'Enter' || e.key === ' ') {
+//                 handleClick(activeIndex)
+//               }
+//             }}
+//             ref={tileRef} // Apply ref to the tile
+//             role="button"
+//           >
+//             <h2 className="text-2xl mb-2 font-dosis font-bold text-white">
+//               {activeApod.title}
+//             </h2>
+//             <ApodImage title={activeApod.title} url={activeApod.url} />
+//             {revealedText && (
+//               <div className="description">
+//                 <p className="font-dosis typing-effect text-left">
+//                   {revealedText}
+//                 </p>
+//               </div>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
+
+// export default React.memo(ApodTile)
+
+
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useLoaderData } from '@remix-run/react'
+import ApodImage from './ApodImage'
 
 interface ApodTileProps {
-  apods: ApodData[]; // Define the prop type for apods
+  apods: ApodData[]
 }
+
 interface ApodData {
-  title: string;
-  url: string;
-  explanation: string;
+  title: string
+  url: string
+  explanation: string
 }
 
 interface LoaderData {
-  apods: ApodData[];
+  apods: ApodData[]
 }
 
-// Define the functional component
 const ApodTile: React.FC<ApodTileProps> = () => {
-  const { apods } = useLoaderData<LoaderData>();
-  const [activeIndex, setActiveIndex] = useState<number>(0); // Track active APOD
-  const [revealedText, setRevealedText] = useState<string>(''); // Track text for typewriter effect
-  const [typingActive, setTypingActive] = useState<boolean>(false); // Track if typewriter effect is active
-  const [typingCompleted, setTypingCompleted] = useState<boolean>(false); // Track when typing has fully completed
-  const typingInterval = useRef<NodeJS.Timeout | null>(null); // Ref to store typing interval
-  const tileRef = useRef<HTMLDivElement | null>(null); // Ref to store the tile
-  const [timeline, setTimeline] = useState(0); // Track scroll position
+  const { apods } = useLoaderData<LoaderData>()
+  const [activeIndex, setActiveIndex] = useState<number>(0) // Track active APOD
+  const [revealedText, setRevealedText] = useState<string>('') // Track text for typewriter effect
+  const [flyOffDirection, setFlyOffDirection] = useState<number>(1) // Track the direction of fly-off, starting with right
+  const [verticalMoveDirection, setVerticalMoveDirection] = useState<number>(1) // Track up or down movement
+  const tileRef = useRef<HTMLDivElement | null>(null) // Ref for tile DOM element
+  const [timeline, setTimeline] = useState(0) // Track scroll timeline
 
-  const handleClick = (index: number) => {
-    if (typingActive) {
-      resetTypewriterEffect(); // Toggle off if typing is active
-    } else if (!typingCompleted) {
-      startTypewriterEffect(index); // Start typing if it's not completed
-    } else {
-      resetTypewriterEffect(); // Reset if already completed
-    }
-  };
+  // Start typewriter effect (memoized)
+  const startTypewriterEffect = useCallback((index: number) => {
+    const explanation = apods[index].explanation
+    let currentIndex = 0
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (tileRef.current && !tileRef.current.contains(event.target as Node)) {
-        resetTypewriterEffect(); // Reset typing if clicked outside the tile
-      }
-    };
+    setRevealedText('') // Reset text
 
-    document.addEventListener('click', handleClickOutside);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, []);
-
-  const startTypewriterEffect = (index: number) => {
-    const explanation = apods[index].explanation;
-    let currentIndex = 0;
-
-    // Clear any existing typing interval to avoid overlapping intervals
-    if (typingInterval.current) {
-      clearInterval(typingInterval.current);
-    }
-
-    setRevealedText(''); // Reset text
-    setTypingActive(true); // Mark typing as active
-    setTypingCompleted(false); // Reset typing completion state
-
-    typingInterval.current = setInterval(() => {
-      currentIndex++;
-
-      setRevealedText(explanation.slice(0, currentIndex)); // Show the correct slice of the text
-
+    const typingInterval = setInterval(() => {
+      currentIndex++
+      setRevealedText(explanation.slice(0, currentIndex))
       if (currentIndex === explanation.length) {
-        clearInterval(typingInterval.current!); // Clear interval once typing is done
-        setTypingActive(false); // Mark typing as inactive
-        setTypingCompleted(true); // Mark typing as fully completed
+        clearInterval(typingInterval) // Clear the interval when typing is done
       }
-    }, 10); // Typing speed
-  };
+    }, 10)
+  }, [apods])
 
-  const resetTypewriterEffect = () => {
-    if (typingInterval.current) {
-      clearInterval(typingInterval.current);
-    }
-    setRevealedText(''); // Clear the text only on explicit user action
-    setTypingActive(false); // Disable typing
-    setTypingCompleted(false); // Reset typing completed state
-  };
+  // Handle the click event with ability to complete typing effect on click
+  const handleClick = useCallback((index: number) => {
+    startTypewriterEffect(index) // Trigger typing effect on click
+  }, [startTypewriterEffect])
 
-  // Memoize the transform calculation to prevent unnecessary recalculations
-  const calculateTransform = useMemo(() => (index: number) => {
-    const baseScroll = index * 1000;
-    const progress = (timeline - baseScroll) / 500;
-  
-    const scale = progress >= 0.5 ? 1.5 : Math.min(1.5, progress + 0.5);
-    const opacity = progress >= 0 ? 1 : Math.max(0, 1 + progress);
-  
-    // Subtle skew effect to simulate the bottom-right corner being closer to the viewer
-    const initialSkewX = -5; // Subtle skew on X-axis
-    const initialSkewY = 3;  // Slight positive skew on Y-axis for perspective
-    const skewX = initialSkewX * (1 - Math.min(1, Math.abs(progress))); // Skew decreases with scroll
-    const skewY = initialSkewY * (1 - Math.min(1, Math.abs(progress))); // Adjust Y-skew subtly
-  
-    // Gentle floating effect: reduce randomness in translation for smoother movement
-    const translateX = Math.sin(progress * Math.PI) * 10; // Gentle horizontal floating movement
-    const translateY = Math.cos(progress * Math.PI) * 10; // Gentle vertical floating movement
-  
-    return {
-      transform: `translate(${translateX}px, ${translateY}px) scale(${scale}) skew(${skewX}deg, ${skewY}deg)`,
-      opacity: opacity,
-      transition: progress > 1 ? 'transform 0.1s ease-in, opacity 0.1s ease-in' : 'transform 0.1s ease-in-out, opacity 0.1s ease-in-out',
-    };
-  }, [timeline]);
-  
-  
-  
+  // Handle scroll effect directly, updating the timeline and transformations in real-time
+  const handleScroll = useCallback((e: WheelEvent) => {
+    setTimeline((prev) => {
+      const newTimeline = prev + e.deltaY * 0.5 // Make scroll feedback faster and smoother
+      const currentBaseScroll = activeIndex * 1000
 
+      // Once the APOD fades out (progress exceeds 1), move to next APOD
+      if (newTimeline > currentBaseScroll + 1000) {
+        setActiveIndex((prevIndex) => {
+          const newIndex = (prevIndex + 1) % apods.length
+          setFlyOffDirection(newIndex % 2 === 0 ? 1 : -1) // Alternate direction for new APOD
+          setVerticalMoveDirection(Math.random() > 0.5 ? 1 : -1) // Randomly move up or down
+          return newIndex
+        })
+        return (activeIndex + 1) * 1000 // Reset timeline for new APOD
+      }
+
+      return newTimeline
+    })
+  }, [activeIndex, apods.length])
+
+  // Add event listener for smooth scroll
   useEffect(() => {
-    const handleScroll = (e: WheelEvent) => {
-      if (!typingActive) {
-        setTimeline((prev) => {
-          const newTimeline = prev + e.deltaY * 1; // Adjust scroll sensitivity
+    window.addEventListener('wheel', handleScroll)
+    return () => window.removeEventListener('wheel', handleScroll)
+  }, [handleScroll])
 
-          // Once the tile has flown past, reset the timeline for the next tile
-          if (newTimeline > (activeIndex + 1) * 1000) {
-            setActiveIndex((prevIndex) => (prevIndex + 1) % apods.length); // Move to the next APOD
-            setTimeline((activeIndex + 1) * 1000); // Reset timeline for new tile
-          }
+  // Calculate the style directly based on the real-time scroll timeline
+  const getTransformStyle = (index: number) => {
+    const baseScroll = index * 1000
+    const progress = (timeline - baseScroll) / 500
 
-          return newTimeline;
-        });
-      }
-    };
+    // Scale stops growing after opacity drops below 0.5
+    let scale = progress >= 0.5 ? 1.3 : Math.min(1.3, progress + 0.5)
+    const fadeOutStart = 0.8
+    const opacity = progress >= fadeOutStart ? Math.max(1 - (progress - fadeOutStart), 0) : 1
 
-    window.addEventListener('wheel', handleScroll);
-    return () => window.removeEventListener('wheel', handleScroll);
-  }, [typingActive, activeIndex, apods.length]);
+    if (opacity <= 0.5) {
+      scale = 1.3 // Stop growing when opacity is less than 0.5
+    }
 
-  const activeApod = apods[activeIndex]; // Render only the active APOD
+    // Fly-off effect as the tile fades out
+    const flyOffDistance = 500 // Reduced fly-off speed by reducing the distance
+    const smoothFlyOff = Math.min(flyOffDistance * (progress - fadeOutStart), flyOffDistance)
+    const translateX = progress >= fadeOutStart ? smoothFlyOff * flyOffDirection : 0
+    const translateY = progress >= fadeOutStart ? verticalMoveDirection * 50 : 0
+
+    return {
+      transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+      opacity: opacity,
+      transition: 'transform 0.1s ease-out, opacity 0.1s ease-out', // Fast and responsive feedback
+    }
+  }
+
+  const activeApod = apods[activeIndex]
 
   // Guard against empty apods array
   if (!apods || apods.length === 0) {
-    return <div>No APOD data available.</div>;
+    return <div>No APOD data available.</div>
   }
 
   return (
@@ -147,30 +274,33 @@ const ApodTile: React.FC<ApodTileProps> = () => {
           <div
             key={activeIndex}
             className={`apod apod-${activeIndex}`}
-            style={calculateTransform(activeIndex)}
+            style={getTransformStyle(activeIndex)}
             onClick={() => handleClick(activeIndex)}
-            tabIndex={0} // Make the element tabbable
+            tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
-                handleClick(activeIndex); // Trigger click on Enter or Space key press
+                handleClick(activeIndex)
               }
             }}
-            ref={tileRef}
+            ref={tileRef} // Apply ref to the tile
             role="button"
           >
-            <h2 className="text-2xl font-dosis font-bold text-white">{activeApod.title}</h2>
+            <h2 className="text-2xl mb-2 font-dosis font-bold text-white">
+              {activeApod.title}
+            </h2>
             <ApodImage title={activeApod.title} url={activeApod.url} />
             {revealedText && (
               <div className="description">
-                <p className="font-dosis typing-effect text-left">{revealedText}</p> {/* Typewriter effect */}
+                <p className="font-dosis typing-effect text-left">
+                  {revealedText}
+                </p>
               </div>
             )}
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-// Export the component using React.memo to prevent unnecessary re-renders
-export default React.memo(ApodTile);
+export default React.memo(ApodTile)
