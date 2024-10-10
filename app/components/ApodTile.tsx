@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLoaderData } from '@remix-run/react'
 import ApodImage from './ApodImage'
 
@@ -8,6 +8,7 @@ interface ApodTileProps {
 
 interface ApodData {
   title: string
+  date: string
   url: string
   explanation: string
 }
@@ -23,13 +24,11 @@ const ApodTile: React.FC<ApodTileProps> = () => {
   const [typingActive, setTypingActive] = useState<boolean>(false) // Track if typing is active
   const [typingCompleted, setTypingCompleted] = useState<boolean>(false) // Track if typing has fully completed
   const typingInterval = useRef<NodeJS.Timeout | null>(null) // Ref to store typing interval
-  const [flyOffDirection, setFlyOffDirection] = useState<number>(1) // Track the direction of fly-off
-  const [verticalMoveDirection, setVerticalMoveDirection] = useState<number>(1) // Track up or down movement
   const tileRef = useRef<HTMLDivElement | null>(null) // Ref for tile DOM element
   const [timeline, setTimeline] = useState(0) // Track scroll timeline
 
-  const startTypewriterEffect = (index: number) => {
-    const explanation = apods[index].explanation
+  // Start typewriter effect
+  const startTypewriterEffect = useCallback((explanation: string) => {
     let currentIndex = 0
 
     // Clear any existing interval
@@ -51,28 +50,39 @@ const ApodTile: React.FC<ApodTileProps> = () => {
         setTypingCompleted(true) // Mark typing as completed
       }
     }, 10) // Typing speed
-  }
+  }, [])
 
-  const resetTypewriterEffect = () => {
+  // Reset typewriter effect
+  const resetTypewriterEffect = useCallback(() => {
     if (typingInterval.current) {
       clearInterval(typingInterval.current) // Clear any ongoing interval
     }
     setRevealedText('') // Clear revealed text
     setTypingActive(false) // Reset typing state
     setTypingCompleted(false) // Reset typing completion state
-  }
+  }, [])
 
-  // Handle the click event with ability to complete typing effect on click
-  const handleClick = (index: number) => {
-    if (typingActive) {
-      resetTypewriterEffect() // If typing is active, reset
-    } else if (!typingCompleted) {
-      startTypewriterEffect(index) // If typing is not completed, start typing
-    } else {
-      resetTypewriterEffect() // If typing completed, reset
-    }
-  }
+  // Handle click event for the tile
+  const handleClick = useCallback(
+    (index: number) => {
+      if (typingActive) {
+        resetTypewriterEffect() // If typing is active, reset
+      } else if (!typingCompleted) {
+        startTypewriterEffect(apods[index].explanation) // If typing is not completed, start typing
+      } else {
+        resetTypewriterEffect() // If typing completed, reset
+      }
+    },
+    [
+      typingActive,
+      typingCompleted,
+      apods,
+      resetTypewriterEffect,
+      startTypewriterEffect,
+    ]
+  )
 
+  // Handle outside clicks
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (tileRef.current && !tileRef.current.contains(event.target as Node)) {
@@ -84,7 +94,7 @@ const ApodTile: React.FC<ApodTileProps> = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [])
+  }, [resetTypewriterEffect])
 
   // Handle scroll effect directly, updating the timeline and transformations in real-time
   const handleScroll = useCallback(
@@ -96,8 +106,6 @@ const ApodTile: React.FC<ApodTileProps> = () => {
         if (newTimeline > currentBaseScroll + 1000) {
           setActiveIndex((prevIndex) => {
             const newIndex = (prevIndex + 1) % apods.length
-            setFlyOffDirection(newIndex % 2 === 0 ? 1 : -1)
-            setVerticalMoveDirection(Math.random() > 0.5 ? 1 : -1)
             return newIndex
           })
           return (activeIndex + 1) * 1000
@@ -114,36 +122,39 @@ const ApodTile: React.FC<ApodTileProps> = () => {
     return () => window.removeEventListener('wheel', handleScroll)
   }, [handleScroll])
 
-  const getTransformStyle = (index: number) => {
-    const baseScroll = index * 1000
-    const progress = (timeline - baseScroll) / 500
-    let scale = progress >= 0.5 ? 1.3 : Math.min(1.3, progress + 0.5)
-    const fadeOutStart = 0.8
-    const opacity =
-      progress >= fadeOutStart ? Math.max(1 - (progress - fadeOutStart), 0) : 1
+  // Memoize transformation styles for better performance
+  const getTransformStyle = useCallback(
+    (index: number) => {
+      const baseScroll = index * 1000
+      const progress = (timeline - baseScroll) / 500
+      const scale = progress >= 0.5 ? 1.3 : Math.min(1.3, progress + 0.5)
+      const fadeOutStart = 0.8
+      const opacity =
+        progress >= fadeOutStart
+          ? Math.max(1 - (progress - fadeOutStart), 0)
+          : 1
 
-    if (opacity <= 0.5) {
-      scale = 1.3
-    }
+      const flyOffDistance = 500
+      const smoothFlyOff = Math.min(
+        flyOffDistance * (progress - fadeOutStart),
+        flyOffDistance
+      )
+      const translateX = progress >= fadeOutStart ? smoothFlyOff * 1 : 0
+      const translateY = progress >= fadeOutStart ? 50 : 0
 
-    const flyOffDistance = 500
-    const smoothFlyOff = Math.min(
-      flyOffDistance * (progress - fadeOutStart),
-      flyOffDistance
-    )
-    const translateX =
-      progress >= fadeOutStart ? smoothFlyOff * flyOffDirection : 0
-    const translateY = progress >= fadeOutStart ? verticalMoveDirection * 50 : 0
+      return {
+        transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+        opacity: opacity,
+        transition: 'transform 0.1s ease-out, opacity 0.1s ease-out',
+      }
+    },
+    [timeline]
+  )
 
-    return {
-      transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-      opacity: opacity,
-      transition: 'transform 0.1s ease-out, opacity 0.1s ease-out',
-    }
-  }
+  // Memoize activeApod to avoid unnecessary re-renders
+  const activeApod = useMemo(() => apods[activeIndex], [apods, activeIndex])
 
-  const activeApod = apods[activeIndex]
-
+  // Guard against empty apods array
   if (!apods || apods.length === 0) {
     return <div>No APOD data available.</div>
   }
@@ -157,7 +168,7 @@ const ApodTile: React.FC<ApodTileProps> = () => {
             className={`apod apod-${activeIndex}`}
             style={getTransformStyle(activeIndex)}
             onClick={() => handleClick(activeIndex)}
-            tabIndex={0}
+            tabIndex={0} // Make the element tabbable
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 handleClick(activeIndex)
@@ -166,9 +177,12 @@ const ApodTile: React.FC<ApodTileProps> = () => {
             ref={tileRef}
             role="button"
           >
-            <h2 className="text-2xl mb-2 font-dosis font-bold text-white">
-              {activeApod.title}
-            </h2>
+            <div className="flex flex-row justify-between items-end mb-2">
+              <h2 className="text-2xl font-dosis font-bold text-white">
+                {activeApod.title}
+              </h2>
+              <p>{activeApod.date}</p>
+            </div>
             <ApodImage title={activeApod.title} url={activeApod.url} />
             {revealedText && (
               <div className="description">

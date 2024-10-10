@@ -3,6 +3,7 @@ import { LoaderFunction, json } from "@remix-run/node";
 interface ApodData {
   title: string;
   url: string;
+  date: string;
   explanation: string;
 }
 
@@ -51,7 +52,6 @@ export const loader: LoaderFunction = async () => {
         throw new Error(`Error fetching APOD for ${date}`);
       }
       const apodData = await res.json();
-  
       // Make sure apodData has the required fields to satisfy the ApodData interface
       if (!apodData.url || !apodData.title || !apodData.explanation) {
         return null; // Return null if any required field is missing
@@ -59,6 +59,7 @@ export const loader: LoaderFunction = async () => {
   
       return {
         title: apodData.title,
+        date: date,
         url: optimizeImageUrl(apodData.url, 800, 600), // Pass desired width/height for the image
         explanation: apodData.explanation,
       };
