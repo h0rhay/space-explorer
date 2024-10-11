@@ -20,12 +20,11 @@ const formatDate = (date: Date): string => {
 };
 
 // Function to get an array of last N formatted dates (e.g., last 3 days)
-const getLastNDates = (n: number): string[] => {
+const getLastNDates = (n: number, baseDate = new Date()): string[] => {
   const dates = [];
-  const today = new Date();
   for (let i = 0; i < n; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
+    const date = new Date(baseDate);
+    date.setDate(baseDate.getDate() - i);
     dates.push(formatDate(date));
   }
   return dates;
@@ -40,27 +39,38 @@ const optimizeImageUrl = (originalUrl: string, width: number, height: number) =>
 };
 
 // Loader function to fetch multiple APOD images
-export const loader: LoaderFunction = async () => {
-  const dates = getLastNDates(3);
+export const loader: LoaderFunction = async ({ request }) => {
+  const url = new URL(request.url);
+  const lastDate = url.searchParams.get('lastDate');
+
+  // Fallback to today's date if lastDate is missing or invalid
+  const baseDate = lastDate ? new Date(lastDate) : new Date();
+  if (isNaN(baseDate.getTime())) {
+    console.error(`Invalid date received: ${lastDate}`);
+    return json({ apods: [] }, { status: 400 }); // Return empty list if the date is invalid
+  }
+
+  const dates = getLastNDates(3, baseDate); // Fetch 3 previous dates from the base date
 
   const fetchApod = async (date: string): Promise<ApodData | null> => {
-    const url = `https://api.nasa.gov/planetary/apod?api_key=CqOPeA8mBVaYGNvzEf7vaWwW0jKi72eqJN1Bi0mA&date=${date}`;
-  
+    const apiUrl = `https://api.nasa.gov/planetary/apod?api_key=CqOPeA8mBVaYGNvzEf7vaWwW0jKi72eqJN1Bi0mA&date=${date}`;
+
     try {
-      const res = await fetch(url);
+      const res = await fetch(apiUrl);
       if (!res.ok) {
         throw new Error(`Error fetching APOD for ${date}`);
       }
       const apodData = await res.json();
-      // Make sure apodData has the required fields to satisfy the ApodData interface
+
+      // Ensure the data is valid and meets the ApodData interface requirements
       if (!apodData.url || !apodData.title || !apodData.explanation) {
-        return null; // Return null if any required field is missing
+        return null; // Skip this entry if any required field is missing
       }
-  
+
       return {
         title: apodData.title,
         date: date,
-        url: optimizeImageUrl(apodData.url, 800, 600), // Pass desired width/height for the image
+        url: optimizeImageUrl(apodData.url, 800, 600),
         explanation: apodData.explanation,
       };
     } catch (error) {
@@ -68,8 +78,8 @@ export const loader: LoaderFunction = async () => {
       return null;
     }
   };
-  
 
+  // Fetch APODs for each date
   const apods = await Promise.all(dates.map(fetchApod));
   const validApods = apods.filter((apod): apod is ApodData => apod !== null);
 

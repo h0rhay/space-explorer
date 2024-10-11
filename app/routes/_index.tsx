@@ -1,5 +1,5 @@
 import { useLoaderData } from "@remix-run/react";
-import { loader } from "../loaders/ApodLoader"; // Import the loader from apodLoader
+import { loader } from "./apod-loader"; // Import the loader from apodLoader
 import Starfield from "../components/Starfield";
 import ApodTile from "../components/ApodTile"; // ApodTile handles image and description rendering
 import SpaceFontHeading from "../components/SpaceFontHeading";
