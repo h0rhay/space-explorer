@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useLoaderData } from '@remix-run/react'
+import { useLoaderData, useFetcher } from '@remix-run/react'
 import ApodImage from './ApodImage'
-
-interface ApodTileProps {
-  apods: ApodData[]
-}
-
+import { formatDate } from '../lib/formatDate'
 interface ApodData {
   title: string
   date: string
@@ -17,60 +13,64 @@ interface LoaderData {
   apods: ApodData[]
 }
 
-const ApodTile: React.FC<ApodTileProps> = () => {
-  const { apods } = useLoaderData<LoaderData>()
-  const [activeIndex, setActiveIndex] = useState<number>(0) // Track active APOD
-  const [revealedText, setRevealedText] = useState<string>('') // Track text for typewriter effect
-  const [typingActive, setTypingActive] = useState<boolean>(false) // Track if typing is active
-  const [typingCompleted, setTypingCompleted] = useState<boolean>(false) // Track if typing has fully completed
-  const typingInterval = useRef<NodeJS.Timeout | null>(null) // Ref to store typing interval
-  const tileRef = useRef<HTMLDivElement | null>(null) // Ref for tile DOM element
+const ApodTile: React.FC = () => {
+  const { apods: initialApods } = useLoaderData<LoaderData>() // Get initial APODs via Remix loader
+  const fetcher = useFetcher() // Use Remix fetcher for client-side data fetching
+
+  const [apods, setApods] = useState<ApodData[]>(initialApods) // Store all loaded APODs
+  const [activeIndex, setActiveIndex] = useState<number>(0) // Track which APOD is active
+  const [revealedText, setRevealedText] = useState<string>('') // Store revealed text for typewriter effect
+  const [typingActive, setTypingActive] = useState<boolean>(false) // Flag for active typing
+  const [typingCompleted, setTypingCompleted] = useState<boolean>(false) // Flag for completed typing
+  const typingInterval = useRef<NodeJS.Timeout | null>(null)
+  const tileRef = useRef<HTMLDivElement | null>(null)
   const [timeline, setTimeline] = useState(0) // Track scroll timeline
+  const [loadingMore, setLoadingMore] = useState<boolean>(false) // Flag for loading more APODs
+  const [lastDate, setLastDate] = useState<string | null>(null) // Track the last loaded date
 
   // Start typewriter effect
   const startTypewriterEffect = useCallback((explanation: string) => {
     let currentIndex = 0
 
-    // Clear any existing interval
     if (typingInterval.current) {
       clearInterval(typingInterval.current)
     }
 
-    setRevealedText('') // Reset the revealed text
-    setTypingActive(true) // Mark typing as active
-    setTypingCompleted(false) // Reset typing completion state
+    setRevealedText('')
+    setTypingActive(true)
+    setTypingCompleted(false)
 
     typingInterval.current = setInterval(() => {
       currentIndex++
-      setRevealedText(explanation.slice(0, currentIndex)) // Update revealed text
+      setRevealedText(explanation.slice(0, currentIndex))
 
       if (currentIndex === explanation.length) {
-        clearInterval(typingInterval.current!) // Clear interval when done
-        setTypingActive(false) // Typing is done
-        setTypingCompleted(true) // Mark typing as completed
+        clearInterval(typingInterval.current!)
+        setTypingActive(false)
+        setTypingCompleted(true)
       }
-    }, 10) // Typing speed
+    }, 10)
   }, [])
 
   // Reset typewriter effect
   const resetTypewriterEffect = useCallback(() => {
     if (typingInterval.current) {
-      clearInterval(typingInterval.current) // Clear any ongoing interval
+      clearInterval(typingInterval.current)
     }
-    setRevealedText('') // Clear revealed text
-    setTypingActive(false) // Reset typing state
-    setTypingCompleted(false) // Reset typing completion state
+    setRevealedText('')
+    setTypingActive(false)
+    setTypingCompleted(false)
   }, [])
 
   // Handle click event for the tile
   const handleClick = useCallback(
     (index: number) => {
       if (typingActive) {
-        resetTypewriterEffect() // If typing is active, reset
+        resetTypewriterEffect()
       } else if (!typingCompleted) {
-        startTypewriterEffect(apods[index].explanation) // If typing is not completed, start typing
+        startTypewriterEffect(apods[index].explanation)
       } else {
-        resetTypewriterEffect() // If typing completed, reset
+        resetTypewriterEffect()
       }
     },
     [
@@ -86,7 +86,7 @@ const ApodTile: React.FC<ApodTileProps> = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (tileRef.current && !tileRef.current.contains(event.target as Node)) {
-        resetTypewriterEffect() // Reset typing if clicked outside
+        resetTypewriterEffect()
       }
     }
 
@@ -96,7 +96,48 @@ const ApodTile: React.FC<ApodTileProps> = () => {
     }
   }, [resetTypewriterEffect])
 
-  // Handle scroll effect directly, updating the timeline and transformations in real-time
+  // Set the last date based on initial APODs
+  useEffect(() => {
+    if (initialApods.length > 0) {
+      setLastDate(initialApods[initialApods.length - 1].date)
+    }
+  }, [initialApods])
+
+  // Function to load more APODs
+const loadMoreApods = useCallback(() => {
+  if (loadingMore || !lastDate || fetcher.state !== 'idle') return;
+
+  // Calculate one day before the current lastDate
+  const nextDate = new Date(lastDate);
+  nextDate.setDate(nextDate.getDate() - 1);
+  const nextDateFormatted = formatDate(nextDate);
+
+  // Log the nextDate we're about to fetch
+  console.log(`Fetching new APODs starting from: ${nextDateFormatted}`);
+  
+  fetcher.load(`/apod-loader?lastDate=${nextDateFormatted}`);
+  setLoadingMore(true); // Prevent multiple requests while loading
+}, [loadingMore, lastDate, fetcher]);
+
+
+  // When activeIndex reaches 2 (scrolling past the second APOD), load more APODs
+  useEffect(() => {
+    if (activeIndex === 2 && !loadingMore && fetcher.state === 'idle') {
+      loadMoreApods() // Fetch the next set of APODs when the user scrolls past the second one
+    }
+  }, [activeIndex, loadingMore, fetcher.state, loadMoreApods])
+
+  // Append new APODs when they are fetched
+  useEffect(() => {
+    if (fetcher.data && fetcher.data.apods) {
+      const newApods = fetcher.data.apods
+      setApods((prev) => [...prev, ...newApods]) // Add new APODs to the existing state
+      setLastDate(newApods[newApods.length - 1].date) // Update the lastDate with the latest APOD date
+      setLoadingMore(false) // Reset the loading state
+    }
+  }, [fetcher.data])
+
+  // Handle scroll event to update the active APOD index and timeline
   const handleScroll = useCallback(
     (e: WheelEvent) => {
       setTimeline((prev) => {
@@ -117,12 +158,15 @@ const ApodTile: React.FC<ApodTileProps> = () => {
     [activeIndex, apods.length]
   )
 
+  // Add scroll event listener to the window
   useEffect(() => {
     window.addEventListener('wheel', handleScroll)
-    return () => window.removeEventListener('wheel', handleScroll)
+    return () => {
+      window.removeEventListener('wheel', handleScroll)
+    }
   }, [handleScroll])
 
-  // Memoize transformation styles for better performance
+  // Memoize the transformation styles for performance
   const getTransformStyle = useCallback(
     (index: number) => {
       const baseScroll = index * 1000
@@ -139,7 +183,9 @@ const ApodTile: React.FC<ApodTileProps> = () => {
         flyOffDistance * (progress - fadeOutStart),
         flyOffDistance
       )
-      const translateX = progress >= fadeOutStart ? smoothFlyOff * 1 : 0
+      const direction = index % 2 === 0 ? 1 : -1 // Even index flies right, odd index flies left
+
+      const translateX = progress >= fadeOutStart ? smoothFlyOff * direction : 0 // Apply alternating direction
       const translateY = progress >= fadeOutStart ? 50 : 0
 
       return {
@@ -154,7 +200,7 @@ const ApodTile: React.FC<ApodTileProps> = () => {
   // Memoize activeApod to avoid unnecessary re-renders
   const activeApod = useMemo(() => apods[activeIndex], [apods, activeIndex])
 
-  // Guard against empty apods array
+  // Guard against an empty APOD array
   if (!apods || apods.length === 0) {
     return <div>No APOD data available.</div>
   }
@@ -193,6 +239,8 @@ const ApodTile: React.FC<ApodTileProps> = () => {
             )}
           </div>
         </div>
+        {loadingMore && <div>Loading more APODs...</div>}{' '}
+        {/* Show loading indicator */}
       </div>
     </div>
   )
