@@ -38,10 +38,6 @@
   text-align: center;
 }
 
-.content h1 {
-  margin-bottom: 20px;
-}
-
 .ApodTile {
   display: flex;
   flex-direction: column;
@@ -101,14 +97,6 @@
 .apod.active {
   pointer-events: auto; /* Enable interaction for the clicked tile */
   z-index: 10; /* Bring the active tile to the front */
-}
-
-.apod img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  cursor: pointer;
 }
 
 .apod button:focus {

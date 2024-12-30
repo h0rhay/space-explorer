@@ -31,7 +31,7 @@ const getLastNDates = (n: number, baseDate = new Date()): string[] => {
 };
 
 // Cloudinary base URL (using your cloud name "jeff-jefferson")
-const cloudinaryBaseUrl = 'https://res.cloudinary.com/jeff-jefferson/image/fetch';
+const cloudinaryBaseUrl = process.env.CLOUDINARY_API_LOCATION;
 
 // Function to optimize the image URL using Cloudinary with width and height
 const optimizeImageUrl = (originalUrl: string, width: number, height: number) => {
@@ -53,7 +53,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   const dates = getLastNDates(3, baseDate); // Fetch 3 previous dates from the base date
 
   const fetchApod = async (date: string): Promise<ApodData | null> => {
-    const apiUrl = `https://api.nasa.gov/planetary/apod?api_key=CqOPeA8mBVaYGNvzEf7vaWwW0jKi72eqJN1Bi0mA&date=${date}`;
+    const apiUrl = `${process.env.NASA_API_LOCATION}?api_key=${process.env.NASA_API_KEY}&date=${date}`;
 
     try {
       const res = await fetch(apiUrl);

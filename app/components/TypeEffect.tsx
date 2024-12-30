@@ -18,7 +18,7 @@ const TypeEffect: React.FC<TypeEffectProps> = ({ text, isActive }) => {
     }
 
     setRevealedText('') // Reset revealed text
-    setTypingActive(true) // Mark typing as active
+    setTypingActive(!typingActive) // Mark typing as active
 
     typingInterval.current = setInterval(() => {
       currentIndex++
@@ -26,19 +26,19 @@ const TypeEffect: React.FC<TypeEffectProps> = ({ text, isActive }) => {
 
       if (currentIndex === text.length) {
         clearInterval(typingInterval.current!)
-        setTypingActive(false) // Mark typing as complete
+        setTypingActive(!typingActive) // Mark typing as complete
       }
     }, 10)
-  }, [text])
+  }, [text, typingActive])
 
   // Stop typewriter effect
   const stopTypewriterEffect = useCallback(() => {
     if (typingInterval.current) {
       clearInterval(typingInterval.current)
     }
-    setTypingActive(false)
+    setTypingActive(!typingActive)
     setRevealedText('') // Reset the revealed text when stopped
-  }, [])
+  }, [typingActive])
 
   // Cleanup on unmount or when effect changes
   useEffect(() => {
