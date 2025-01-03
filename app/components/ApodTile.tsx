@@ -137,34 +137,33 @@ const loadMoreApods = useCallback(() => {
     }
   }, [fetcher.data])
 
-  // Handle scroll event to update the active APOD index and timeline
-  const handleScroll = useCallback(
-    (e: WheelEvent) => {
-      setTimeline((prev) => {
-        const newTimeline = prev + e.deltaY * 0.5
-        const currentBaseScroll = activeIndex * 1000
+  // Unified scroll handler with normalized delta values
+  const handleScroll = useCallback((e: WheelEvent) => {
+    e.preventDefault();
 
-        if (newTimeline > currentBaseScroll + 1000) {
-          setActiveIndex((prevIndex) => {
-            const newIndex = (prevIndex + 1) % apods.length
-            return newIndex
-          })
-          return (activeIndex + 1) * 1000
-        }
+    const delta = e.deltaMode === 1 
+      ? e.deltaY * 20  // Line mode
+      : e.deltaY;      // Pixel mode
 
-        return newTimeline
-      })
-    },
-    [activeIndex, apods.length]
-  )
+    setTimeline(prev => {
+      const newTimeline = prev + delta * 0.5;
+      const currentBaseScroll = activeIndex * 1000;
 
-  // Add scroll event listener to the window
+      if (newTimeline > currentBaseScroll + 1000) {
+        setActiveIndex(prev => (prev + 1) % apods.length);
+        return (activeIndex + 1) * 1000;
+      }
+
+      return newTimeline;
+    });
+  }, [activeIndex, apods.length]);
+
+  // Updated event listener with passive: false for preventDefault()
   useEffect(() => {
-    window.addEventListener('wheel', handleScroll)
-    return () => {
-      window.removeEventListener('wheel', handleScroll)
-    }
-  }, [handleScroll])
+    const options = { passive: false };
+    window.addEventListener('wheel', handleScroll, options);
+    return () => window.removeEventListener('wheel', handleScroll, options);
+  }, [handleScroll]);
 
   // Memoize the transformation styles for performance
   const getTransformStyle = useCallback(
@@ -239,7 +238,7 @@ const loadMoreApods = useCallback(() => {
             )}
           </div>
         </div>
-        {loadingMore && <div>Loading more APODs...</div>}{' '}
+        {loadingMore && <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">Loading more APODs...</div>}{' '}
         {/* Show loading indicator */}
       </div>
     </div>
