@@ -137,14 +137,7 @@ const loadMoreApods = useCallback(() => {
     }
   }, [fetcher.data])
 
-  // Unified scroll handler with normalized delta values
-  const handleScroll = useCallback((e: WheelEvent) => {
-    e.preventDefault();
-
-    const delta = e.deltaMode === 1 
-      ? e.deltaY * 20  // Line mode
-      : e.deltaY;      // Pixel mode
-
+  const updateTimeline = useCallback((delta: number) => {
     setTimeline(prev => {
       const newTimeline = prev + delta * 0.5;
       const currentBaseScroll = activeIndex * 1000;
@@ -158,12 +151,47 @@ const loadMoreApods = useCallback(() => {
     });
   }, [activeIndex, apods.length]);
 
-  // Updated event listener with passive: false for preventDefault()
+  // Handle mouse wheel
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaMode === 1 
+      ? e.deltaY * 20  // Line mode
+      : e.deltaY;      // Pixel mode
+    
+    updateTimeline(delta);
+  }, [updateTimeline]);
+
+  // Handle touch scroll
+  const lastTouchY = useRef<number | null>(null);
+
+  const handleTouch = useCallback((e: TouchEvent) => {
+    const currentY = e.touches[0].clientY;
+    
+    if (lastTouchY.current !== null) {
+      const delta = lastTouchY.current - currentY;
+      updateTimeline(delta);
+    }
+    
+    lastTouchY.current = currentY;
+  }, [updateTimeline]);
+
+  const handleTouchEnd = useCallback(() => {
+    lastTouchY.current = null;
+  }, []);
+
+  // Add both event listeners
   useEffect(() => {
     const options = { passive: false };
-    window.addEventListener('wheel', handleScroll, options);
-    return () => window.removeEventListener('wheel', handleScroll, options);
-  }, [handleScroll]);
+    window.addEventListener('wheel', handleWheel, options);
+    window.addEventListener('touchmove', handleTouch, options);
+    window.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      window.removeEventListener('wheel', handleWheel, options);
+      window.removeEventListener('touchmove', handleTouch, options);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleWheel, handleTouch, handleTouchEnd]);
 
   // Memoize the transformation styles for performance
   const getTransformStyle = useCallback(
@@ -238,8 +266,7 @@ const loadMoreApods = useCallback(() => {
             )}
           </div>
         </div>
-        {loadingMore && <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">Loading more APODs...</div>}{' '}
-        {/* Show loading indicator */}
+        {loadingMore && <div className="fixed top-[90vh] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">Loading more APODs...</div>}{' '}
       </div>
     </div>
   )
