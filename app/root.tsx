@@ -11,6 +11,7 @@ import "./styles/global.css";
 import "./tailwind.css";
 import "./styles/starfield.css";
 import "./styles/apod_tile.css";
+import './styles/space_heading.css'
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },

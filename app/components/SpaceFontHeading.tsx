@@ -1,10 +1,48 @@
+import { useState, useEffect, useCallback } from 'react'
+
 const SpaceFontHeading = ({ children }: { children: string }) => {
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    const delta = e.deltaMode === 1 
+      ? e.deltaY * 20  // Line mode
+      : e.deltaY      // Pixel mode
+    
+    if (delta > 0) {
+      setIsScrolled(true)
+    }
+  }, [])
+
+  const handleTouch = useCallback((e: TouchEvent) => {
+    const currentY = e.touches[0].clientY
+    const startY = e.touches[0].screenY
+    
+    if (currentY < startY) {
+      setIsScrolled(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    const options: AddEventListenerOptions = { passive: true }
+    
+    window.addEventListener('wheel', handleWheel, options)
+    window.addEventListener('touchmove', handleTouch, options)
+    
+    return () => {
+      window.removeEventListener('wheel', handleWheel)
+      window.removeEventListener('touchmove', handleTouch)
+    }
+  }, [handleWheel, handleTouch])
+
   return (
-    // {this heading should be fixed to the top of the page, and not have any bearing on the scroll events or page height}
     <div className="w-full text-center fixed top-0 left-0 z-50">
       <h1 className="text-[clamp(3rem,6vw,8rem)] uppercase font-bold tracking-narrownpm run decoration-violet-50 font-MachineStd xtext-shadow-space-heading bg-clip-text text-fill-transparent gradient-text">
         {children}
       </h1>
+      <div className={isScrolled ? "animated" : ""}>
+        <p>A simple app that uses a NASA API to fetch and display images from the Astronomy Picture of the Day.</p>
+        <p>You can scroll down, travel through time, and explore the universe.</p>
+      </div>
     </div>
   )
 }
