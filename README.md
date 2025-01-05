@@ -2,7 +2,8 @@
 #### A space exploration app built with Remix.
 
 - Uses NASA's APOD API to fetch images and data.
-
+- Uses Tailwind CSS for styling.
+- Uses Cloudinary for dynamic image processing.
 - The user can scroll through the images and click on a tile to learn more about them.
 
 ## Uses Remix framework
