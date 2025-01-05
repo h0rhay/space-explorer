@@ -1,5 +1,5 @@
 import { LoaderFunction, json } from "@remix-run/node";
-import { isYoutubeUrl } from "~/lib/isYoutube";
+import { isYoutubeUrl } from "../lib/isYoutube";
 
 interface ApodData {
   title: string;

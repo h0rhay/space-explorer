@@ -15,7 +15,7 @@ interface LoaderData {
 }
 
 const ApodTile: React.FC = () => {
-  const { apods: initialApods } = useLoaderData<LoaderData>() // Get initial APODs via Remix loader
+  const { apods: initialApods } = useLoaderData() as LoaderData
   const fetcher = useFetcher() // Use Remix fetcher for client-side data fetching
 
   const [apods, setApods] = useState<ApodData[]>(initialApods) // Store all loaded APODs
@@ -179,25 +179,30 @@ const ApodTile: React.FC = () => {
 
   // Append new APODs when they are fetched
   useEffect(() => {
-    if (fetcher.data && fetcher.data.apods) {
-      const newApods = fetcher.data.apods
-      setApods((prev) => [...prev, ...newApods]) // Add new APODs to the existing state
-      setLastDate(newApods[newApods.length - 1].date) // Update the lastDate with the latest APOD date
-      setLoadingMore(false) // Reset the loading state
+    if (fetcher.data && (fetcher.data as LoaderData).apods) {
+      const newApods = (fetcher.data as LoaderData).apods
+      setApods((prev) => [...prev, ...newApods])
+      setLastDate(newApods[newApods.length - 1].date)
+      setLoadingMore(false)
     }
   }, [fetcher.data])
 
   // Add both event listeners
   useEffect(() => {
-    const options = { passive: false };
-    window.addEventListener('wheel', handleWheel, options);
-    window.addEventListener('touchmove', handleTouch, options);
-    window.addEventListener('touchend', handleTouchEnd);
+    const options: AddEventListenerOptions = { passive: false };
+    
+    const wheelHandler = (e: WheelEvent) => handleWheel(e);
+    const touchHandler = (e: TouchEvent) => handleTouch(e);
+    const touchEndHandler = () => handleTouchEnd();
+
+    window.addEventListener('wheel', wheelHandler, options);
+    window.addEventListener('touchmove', touchHandler, options);
+    window.addEventListener('touchend', touchEndHandler);
     
     return () => {
-      window.removeEventListener('wheel', handleWheel, options);
-      window.removeEventListener('touchmove', handleTouch, options);
-      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('wheel', wheelHandler, options);
+      window.removeEventListener('touchmove', touchHandler, options);
+      window.removeEventListener('touchend', touchEndHandler);
     };
   }, [handleWheel, handleTouch, handleTouchEnd]);
 
