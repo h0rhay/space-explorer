@@ -1,4 +1,9 @@
-# Welcome to Remix!
+# 🚀 Space Explorer 🚀
+A space exploration app built with Remix.
+Uses NASA's APOD API to fetch images and data.
+The user can scroll through the images and click on a tile to learn more about them.
+
+## Uses Remix framework
 
 - 📖 [Remix docs](https://remix.run/docs)
 
