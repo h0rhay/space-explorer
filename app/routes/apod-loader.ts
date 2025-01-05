@@ -1,4 +1,5 @@
 import { LoaderFunction, json } from "@remix-run/node";
+import { isYoutubeUrl } from "~/lib/isYoutube";
 
 interface ApodData {
   title: string;
@@ -33,9 +34,15 @@ const getLastNDates = (n: number, baseDate = new Date()): string[] => {
 // Cloudinary base URL (using your cloud name "jeff-jefferson")
 const cloudinaryBaseUrl = process.env.CLOUDINARY_API_LOCATION;
 
-// Function to optimize the image URL using Cloudinary with width and height
+// Function to optimize the image URL using Cloudinary with width and height only if it's not a youtube url
+
 const optimizeImageUrl = (originalUrl: string, width: number, height: number) => {
   return `${cloudinaryBaseUrl}/w_${width},h_${height},c_fill,f_auto,q_auto/${originalUrl}`;
+};
+
+//function to return either the optimized image url or the original url if it's a youtube url
+const getImageUrl = (originalUrl: string, width: number, height: number) => {
+  return isYoutubeUrl(originalUrl) ? originalUrl : optimizeImageUrl(originalUrl, width, height);
 };
 
 // Loader function to fetch multiple APOD images
@@ -70,7 +77,7 @@ export const loader: LoaderFunction = async ({ request }) => {
       return {
         title: apodData.title,
         date: date,
-        url: optimizeImageUrl(apodData.url, 800, 600),
+        url: getImageUrl(apodData.url, 800, 600),
         explanation: apodData.explanation,
       };
     } catch (error) {

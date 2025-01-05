@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useLoaderData, useFetcher } from '@remix-run/react'
 import ApodImage from './ApodImage'
 import { formatDate } from '../lib/formatDate'
+import { isYoutubeUrl } from '../lib/isYoutube'
 interface ApodData {
   title: string
   date: string
@@ -27,6 +28,14 @@ const ApodTile: React.FC = () => {
   const [timeline, setTimeline] = useState(0) // Track scroll timeline
   const [loadingMore, setLoadingMore] = useState<boolean>(false) // Flag for loading more APODs
   const [lastDate, setLastDate] = useState<string | null>(null) // Track the last loaded date
+
+  // Memoize activeApod first
+  const activeApod = useMemo(() => apods[activeIndex], [apods, activeIndex])
+
+  // Then use activeApod in isCurrentTileVideo
+  const isCurrentTileVideo = useMemo(() => {
+    return activeApod && isYoutubeUrl(activeApod.url)
+  }, [activeApod?.url])
 
   // Start typewriter effect
   const startTypewriterEffect = useCallback((explanation: string) => {
@@ -82,60 +91,21 @@ const ApodTile: React.FC = () => {
     ]
   )
 
-  // Handle outside clicks
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (tileRef.current && !tileRef.current.contains(event.target as Node)) {
-        resetTypewriterEffect()
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [resetTypewriterEffect])
-
-  // Set the last date based on initial APODs
-  useEffect(() => {
-    if (initialApods.length > 0) {
-      setLastDate(initialApods[initialApods.length - 1].date)
-    }
-  }, [initialApods])
-
   // Function to load more APODs
-const loadMoreApods = useCallback(() => {
-  if (loadingMore || !lastDate || fetcher.state !== 'idle') return;
-
-  // Calculate one day before the current lastDate
-  const nextDate = new Date(lastDate);
-  nextDate.setDate(nextDate.getDate() - 1);
-  const nextDateFormatted = formatDate(nextDate);
-
-  // Log the nextDate we're about to fetch
-  console.log(`Fetching new APODs starting from: ${nextDateFormatted}`);
-  
-  fetcher.load(`/apod-loader?lastDate=${nextDateFormatted}`);
-  setLoadingMore(true); // Prevent multiple requests while loading
-}, [loadingMore, lastDate, fetcher]);
-
-
-  // When activeIndex reaches 2 (scrolling past the second APOD), load more APODs
-  useEffect(() => {
-    if (activeIndex === 2 && !loadingMore && fetcher.state === 'idle') {
-      loadMoreApods() // Fetch the next set of APODs when the user scrolls past the second one
-    }
-  }, [activeIndex, loadingMore, fetcher.state, loadMoreApods])
-
-  // Append new APODs when they are fetched
-  useEffect(() => {
-    if (fetcher.data && fetcher.data.apods) {
-      const newApods = fetcher.data.apods
-      setApods((prev) => [...prev, ...newApods]) // Add new APODs to the existing state
-      setLastDate(newApods[newApods.length - 1].date) // Update the lastDate with the latest APOD date
-      setLoadingMore(false) // Reset the loading state
-    }
-  }, [fetcher.data])
+  const loadMoreApods = useCallback(() => {
+    if (loadingMore || !lastDate || fetcher.state !== 'idle') return;
+    
+    // Calculate one day before the current lastDate
+    const nextDate = new Date(lastDate);
+    nextDate.setDate(nextDate.getDate() - 1);
+    const nextDateFormatted = formatDate(nextDate);
+    
+    // Log the nextDate we're about to fetch
+    console.log(`Fetching new APODs starting from: ${nextDateFormatted}`);
+    
+    fetcher.load(`/apod-loader?lastDate=${nextDateFormatted}`);
+    setLoadingMore(true); // Prevent multiple requests while loading
+  }, [loadingMore, lastDate, fetcher]);
 
   const updateTimeline = useCallback((delta: number) => {
     setTimeline(prev => {
@@ -178,6 +148,44 @@ const loadMoreApods = useCallback(() => {
   const handleTouchEnd = useCallback(() => {
     lastTouchY.current = null;
   }, []);
+  
+  // Handle outside clicks
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tileRef.current && !tileRef.current.contains(event.target as Node)) {
+        resetTypewriterEffect()
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [resetTypewriterEffect])
+
+  // Set the last date based on initial APODs
+  useEffect(() => {
+    if (initialApods.length > 0) {
+      setLastDate(initialApods[initialApods.length - 1].date)
+    }
+  }, [initialApods])
+
+  // When activeIndex reaches 2 (scrolling past the second APOD), load more APODs
+  useEffect(() => {
+    if (activeIndex === 2 && !loadingMore && fetcher.state === 'idle' && !isCurrentTileVideo) {
+      loadMoreApods()
+    }
+  }, [activeIndex, loadingMore, fetcher.state, loadMoreApods, isCurrentTileVideo])
+
+  // Append new APODs when they are fetched
+  useEffect(() => {
+    if (fetcher.data && fetcher.data.apods) {
+      const newApods = fetcher.data.apods
+      setApods((prev) => [...prev, ...newApods]) // Add new APODs to the existing state
+      setLastDate(newApods[newApods.length - 1].date) // Update the lastDate with the latest APOD date
+      setLoadingMore(false) // Reset the loading state
+    }
+  }, [fetcher.data])
 
   // Add both event listeners
   useEffect(() => {
@@ -212,7 +220,7 @@ const loadMoreApods = useCallback(() => {
       )
       const direction = index % 2 === 0 ? 1 : -1 // Even index flies right, odd index flies left
 
-      const translateX = progress >= fadeOutStart ? smoothFlyOff * direction : 0 // Apply alternating direction
+      const translateX = progress >= fadeOutStart ? smoothFlyOff * direction : 0
       const translateY = progress >= fadeOutStart ? 50 : 0
 
       return {
@@ -223,9 +231,6 @@ const loadMoreApods = useCallback(() => {
     },
     [timeline]
   )
-
-  // Memoize activeApod to avoid unnecessary re-renders
-  const activeApod = useMemo(() => apods[activeIndex], [apods, activeIndex])
 
   // Guard against an empty APOD array
   if (!apods || apods.length === 0) {
@@ -250,11 +255,12 @@ const loadMoreApods = useCallback(() => {
             ref={tileRef}
             role="button"
           >
-            <div className="flex flex-row justify-between items-end mb-2">
-              <h2 className="text-2xl font-dosis font-bold text-white">
+            <div className="flex flex-row items-center mb-2">
+              {/* make these 2 elements 80% and 20% on desktop, and 60% and 40% on mobile */}
+              <h2 className="text-2xl font-dosis font-bold text-white text-pretty w-[60%] md:w-[80%] self-start flex leading-none">
                 {activeApod.title}
               </h2>
-              <p>{activeApod.date}</p>
+              <p className="w-[40%] md:w-[20%]">{activeApod.date}</p>
             </div>
             <ApodImage title={activeApod.title} url={activeApod.url} />
             {revealedText && (
