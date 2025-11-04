@@ -15,6 +15,7 @@ interface LoaderData {
     type: 'timeout' | 'network' | 'api_error' | 'service_outage';
     message: string;
   };
+  isDemoData?: boolean; // Flag to indicate if this is demo/placeholder data
 }
 
 // Helper function to format dates as YYYY-MM-DD
@@ -65,7 +66,16 @@ export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
   const lastDate = url.searchParams.get('lastDate');
 
-  const baseDate = lastDate ? new Date(lastDate) : new Date();
+  // For initial SSR load (no lastDate param), return demo data immediately for instant rendering
+  // Real data will be fetched client-side after hydration
+  if (!lastDate) {
+    return json<LoaderData>({ 
+      apods: [{ ...DEMO_APOD_DATA, date: formatDate(new Date()) }],
+      isDemoData: true
+    });
+  }
+
+  const baseDate = new Date(lastDate);
   if (isNaN(baseDate.getTime())) {
     return json({ apods: [] }, { status: 400 });
   }
@@ -144,29 +154,11 @@ export const loader: LoaderFunction = async ({ request }) => {
     }
   };
 
-  // Quick check: Try first request with a shorter timeout to detect service outages faster
-  const firstDate = dates[0];
-  const quickCheck = await fetchApod(firstDate);
+  // For subsequent requests (with lastDate param), fetch real data
+  // These are client-side requests triggered by user scrolling
+  const results = await Promise.allSettled(dates.map(fetchApod));
   
-  // If first request indicates service outage, return demo data immediately
-  if (quickCheck.error?.type === 'service_outage') {
-    return json<LoaderData>({ 
-      apods: [{ ...DEMO_APOD_DATA, date: formatDate(new Date()) }],
-      error: quickCheck.error
-    });
-  }
-
-  // Otherwise, fetch remaining dates in parallel
-  const remainingDates = dates.slice(1);
-  const remainingResults = remainingDates.length > 0 
-    ? await Promise.allSettled(remainingDates.map(fetchApod))
-    : [];
-
-  // Combine first result with remaining results
-  const allResults = [
-    { status: 'fulfilled' as const, value: quickCheck },
-    ...remainingResults
-  ].map(result => 
+  const settledResults = results.map(result => 
     result.status === 'fulfilled' ? result.value : {
       data: null,
       error: {
@@ -176,20 +168,21 @@ export const loader: LoaderFunction = async ({ request }) => {
     }
   );
 
-  const validApods = allResults
+  const validApods = settledResults
     .map(r => r.data)
     .filter((apod): apod is ApodData => apod !== null);
   
-  const firstError = allResults.find(r => r.error)?.error;
+  const firstError = settledResults.find(r => r.error)?.error;
 
-  // If no valid APODs, return demo data immediately
+  // If no valid APODs, return demo data
   if (validApods.length === 0) {
     return json<LoaderData>({ 
-      apods: [{ ...DEMO_APOD_DATA, date: formatDate(new Date()) }],
+      apods: [{ ...DEMO_APOD_DATA, date: formatDate(baseDate) }],
       error: firstError || {
         type: 'api_error',
         message: 'Unable to fetch data from NASA API. Showing demo content.'
-      }
+      },
+      isDemoData: true
     });
   }
 

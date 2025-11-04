@@ -13,14 +13,16 @@ interface LoaderData {
     type: 'timeout' | 'network' | 'api_error' | 'service_outage';
     message: string;
   };
+  isDemoData?: boolean;
 }
 
 interface ApodTileProps {
   apods: ApodData[];
   error?: LoaderData['error'];
+  isDemoData?: boolean;
 }
 
-const ApodTile: React.FC<ApodTileProps> = ({ apods: initialApods, error: initialError }) => {
+const ApodTile: React.FC<ApodTileProps> = ({ apods: initialApods, error: initialError, isDemoData }) => {
   const fetcher = useFetcher() // Use Remix fetcher for client-side data fetching
 
   const [apods, setApods] = useState<ApodData[]>(initialApods) // Store all loaded APODs
@@ -34,6 +36,7 @@ const ApodTile: React.FC<ApodTileProps> = ({ apods: initialApods, error: initial
   const [timeline, setTimeline] = useState(0) // Track scroll timeline
   const [loadingMore, setLoadingMore] = useState<boolean>(false) // Flag for loading more APODs
   const [lastDate, setLastDate] = useState<string | null>(null) // Track the last loaded date
+  const [hasFetchedRealData, setHasFetchedRealData] = useState<boolean>(false) // Track if we've fetched real data
 
   // Memoize activeApod first
   const activeApod = useMemo(() => apods[activeIndex], [apods, activeIndex])
@@ -41,7 +44,7 @@ const ApodTile: React.FC<ApodTileProps> = ({ apods: initialApods, error: initial
   // Then use activeApod in isCurrentTileVideo
   const isCurrentTileVideo = useMemo(() => {
     return activeApod && isYoutubeUrl(activeApod.url)
-  }, [activeApod?.url])
+  }, [activeApod])
 
   // Start typewriter effect
   const startTypewriterEffect = useCallback((explanation: string) => {
@@ -166,41 +169,68 @@ const ApodTile: React.FC<ApodTileProps> = ({ apods: initialApods, error: initial
     }
   }, [resetTypewriterEffect])
 
+  // Fetch real data client-side after hydration if we have demo data
+  useEffect(() => {
+    if (isDemoData && !hasFetchedRealData && fetcher.state === 'idle') {
+      // Fetch real data for today's date
+      fetcher.load('/apod-loader?lastDate=' + formatDate(new Date()));
+      setHasFetchedRealData(true);
+    }
+  }, [isDemoData, hasFetchedRealData, fetcher]);
+
+  // Replace demo data with real data when it arrives
+  useEffect(() => {
+    if (fetcher.data && isDemoData && hasFetchedRealData) {
+      const loaderData = fetcher.data as LoaderData;
+      if (loaderData.apods && loaderData.apods.length > 0 && !loaderData.isDemoData) {
+        // Replace demo data with real data
+        setApods(loaderData.apods);
+        setError(loaderData.error);
+        if (loaderData.apods.length > 0) {
+          setLastDate(loaderData.apods[loaderData.apods.length - 1].date);
+        }
+      } else if (loaderData.error) {
+        // Keep demo data but show error
+        setError(loaderData.error);
+      }
+    }
+  }, [fetcher.data, isDemoData, hasFetchedRealData]);
+
   // Set the last date based on initial APODs
   useEffect(() => {
-    if (initialApods.length > 0) {
+    if (initialApods.length > 0 && !lastDate) {
       setLastDate(initialApods[initialApods.length - 1].date)
     }
-  }, [initialApods])
+  }, [initialApods, lastDate])
 
   // When activeIndex reaches 2 (scrolling past the second APOD), load more APODs
   useEffect(() => {
-    if (activeIndex === 2 && !loadingMore && fetcher.state === 'idle' && !isCurrentTileVideo) {
+    if (activeIndex === 2 && !loadingMore && fetcher.state === 'idle' && !isCurrentTileVideo && lastDate) {
       loadMoreApods()
     }
-  }, [activeIndex, loadingMore, fetcher.state, loadMoreApods, isCurrentTileVideo])
+  }, [activeIndex, loadingMore, fetcher.state, loadMoreApods, isCurrentTileVideo, lastDate])
 
   // Update error state when initialError changes
   useEffect(() => {
     setError(initialError);
   }, [initialError]);
 
-  // Append new APODs when they are fetched
+  // Append new APODs when they are fetched (for subsequent scroll loads, not initial replacement)
   useEffect(() => {
-    if (fetcher.data) {
+    if (fetcher.data && hasFetchedRealData && loadingMore) {
+      // Handle subsequent pagination loads
       const loaderData = fetcher.data as LoaderData;
-      if (loaderData.apods && loaderData.apods.length > 0) {
+      if (loaderData.apods && loaderData.apods.length > 0 && !loaderData.isDemoData) {
         const newApods = loaderData.apods;
         setApods((prev) => [...prev, ...newApods]);
         setLastDate(newApods[newApods.length - 1].date);
         setLoadingMore(false);
       } else if (loaderData.error) {
-        // If there's an error when fetching more, stop loading
         setError(loaderData.error);
         setLoadingMore(false);
       }
     }
-  }, [fetcher.data])
+  }, [fetcher.data, fetcher.state, hasFetchedRealData, loadingMore])
 
   // Add both event listeners
   useEffect(() => {
