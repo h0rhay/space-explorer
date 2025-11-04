@@ -1,24 +1,30 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useLoaderData, useFetcher } from '@remix-run/react'
+import { useFetcher } from '@remix-run/react'
 import ApodImage from './ApodImage'
+import Toast from './Toast'
 import { formatDate } from '../lib/formatDate'
 import { isYoutubeUrl } from '../lib/isYoutube'
-interface ApodData {
-  title: string
-  date: string
-  url: string
-  explanation: string
-}
+import { getToastContent } from './toastUtils'
+import type { ApodData } from '../routes/apod-loader'
 
 interface LoaderData {
   apods: ApodData[]
+  error?: {
+    type: 'timeout' | 'network' | 'api_error' | 'service_outage';
+    message: string;
+  };
 }
 
-const ApodTile: React.FC = () => {
-  const { apods: initialApods } = useLoaderData() as LoaderData
+interface ApodTileProps {
+  apods: ApodData[];
+  error?: LoaderData['error'];
+}
+
+const ApodTile: React.FC<ApodTileProps> = ({ apods: initialApods, error: initialError }) => {
   const fetcher = useFetcher() // Use Remix fetcher for client-side data fetching
 
   const [apods, setApods] = useState<ApodData[]>(initialApods) // Store all loaded APODs
+  const [error, setError] = useState(initialError) // Store error state
   const [activeIndex, setActiveIndex] = useState<number>(0) // Track which APOD is active
   const [revealedText, setRevealedText] = useState<string>('') // Store revealed text for typewriter effect
   const [typingActive, setTypingActive] = useState<boolean>(false) // Flag for active typing
@@ -100,9 +106,6 @@ const ApodTile: React.FC = () => {
     nextDate.setDate(nextDate.getDate() - 1);
     const nextDateFormatted = formatDate(nextDate);
     
-    // Log the nextDate we're about to fetch
-    console.log(`Fetching new APODs starting from: ${nextDateFormatted}`);
-    
     fetcher.load(`/apod-loader?lastDate=${nextDateFormatted}`);
     setLoadingMore(true); // Prevent multiple requests while loading
   }, [loadingMore, lastDate, fetcher]);
@@ -177,13 +180,25 @@ const ApodTile: React.FC = () => {
     }
   }, [activeIndex, loadingMore, fetcher.state, loadMoreApods, isCurrentTileVideo])
 
+  // Update error state when initialError changes
+  useEffect(() => {
+    setError(initialError);
+  }, [initialError]);
+
   // Append new APODs when they are fetched
   useEffect(() => {
-    if (fetcher.data && (fetcher.data as LoaderData).apods) {
-      const newApods = (fetcher.data as LoaderData).apods
-      setApods((prev) => [...prev, ...newApods])
-      setLastDate(newApods[newApods.length - 1].date)
-      setLoadingMore(false)
+    if (fetcher.data) {
+      const loaderData = fetcher.data as LoaderData;
+      if (loaderData.apods && loaderData.apods.length > 0) {
+        const newApods = loaderData.apods;
+        setApods((prev) => [...prev, ...newApods]);
+        setLastDate(newApods[newApods.length - 1].date);
+        setLoadingMore(false);
+      } else if (loaderData.error) {
+        // If there's an error when fetching more, stop loading
+        setError(loaderData.error);
+        setLoadingMore(false);
+      }
     }
   }, [fetcher.data])
 
@@ -237,13 +252,29 @@ const ApodTile: React.FC = () => {
     [timeline]
   )
 
+
   // Guard against an empty APOD array
   if (!apods || apods.length === 0) {
-    return <div>No APOD data available.</div>
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+        <div className="text-custom-cyan/80 font-dosis text-lg">
+          No APOD data available at this time.
+        </div>
+      </div>
+    );
   }
+
+  const toastContent = error ? getToastContent(error.type) : null;
 
   return (
     <div className="scroll-container">
+      {error && toastContent && (
+        <Toast
+          title={toastContent.title}
+          message={toastContent.message}
+          onDismiss={() => setError(undefined)}
+        />
+      )}
       <div className="wrapper">
         <div className="content">
           <div

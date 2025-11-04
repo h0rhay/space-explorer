@@ -1,7 +1,8 @@
 import { LoaderFunction, json } from "@remix-run/node";
 import { isYoutubeUrl } from "../lib/isYoutube";
+import { DEMO_APOD_DATA } from "../lib/demoApod";
 
-interface ApodData {
+export interface ApodData {
   title: string;
   url: string;
   date: string;
@@ -10,6 +11,10 @@ interface ApodData {
 
 interface LoaderData {
   apods: ApodData[];
+  error?: {
+    type: 'timeout' | 'network' | 'api_error' | 'service_outage';
+    message: string;
+  };
 }
 
 // Helper function to format dates as YYYY-MM-DD
@@ -35,8 +40,11 @@ const getLastNDates = (n: number, baseDate = new Date()): string[] => {
 const cloudinaryBaseUrl = process.env.CLOUDINARY_API_LOCATION;
 
 // Function to optimize the image URL using Cloudinary with width and height only if it's not a youtube url
-
 const optimizeImageUrl = (originalUrl: string, width: number, height: number) => {
+  if (!cloudinaryBaseUrl) {
+    // Fallback to original URL if Cloudinary is not configured
+    return originalUrl;
+  }
   return `${cloudinaryBaseUrl}/w_${width},h_${height},c_fill,f_auto,q_auto/${originalUrl}`;
 };
 
@@ -47,48 +55,111 @@ const getImageUrl = (originalUrl: string, width: number, height: number) => {
 
 // Loader function to fetch multiple APOD images
 export const loader: LoaderFunction = async ({ request }) => {
+  const nasaApiLocation = process.env.NASA_API_LOCATION;
+  const nasaApiKey = process.env.NASA_API_KEY;
+
+  if (!nasaApiLocation || !nasaApiKey) {
+    throw new Response('Missing NASA API configuration. Check server logs.', { status: 500 });
+  }
+
   const url = new URL(request.url);
   const lastDate = url.searchParams.get('lastDate');
 
-  // Fallback to today's date if lastDate is missing or invalid
   const baseDate = lastDate ? new Date(lastDate) : new Date();
   if (isNaN(baseDate.getTime())) {
-    console.error(`Invalid date received: ${lastDate}`);
-    return json({ apods: [] }, { status: 400 }); // Return empty list if the date is invalid
+    return json({ apods: [] }, { status: 400 });
   }
 
-  const dates = getLastNDates(3, baseDate); // Fetch 3 previous dates from the base date
+  const dates = getLastNDates(3, baseDate);
 
-  const fetchApod = async (date: string): Promise<ApodData | null> => {
-    const apiUrl = `${process.env.NASA_API_LOCATION}?api_key=${process.env.NASA_API_KEY}&date=${date}`;
+  const fetchApod = async (date: string): Promise<{ data: ApodData | null; error?: LoaderData['error'] }> => {
+    const apiUrl = `${nasaApiLocation}?api_key=${nasaApiKey}&date=${date}`;
 
     try {
-      const res = await fetch(apiUrl);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const res = await fetch(apiUrl, { 
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      clearTimeout(timeoutId);
+      
       if (!res.ok) {
-        throw new Error(`Error fetching APOD for ${date}`);
+        // Check if it's a service outage (503, 502, 500)
+        if (res.status >= 500) {
+          return { 
+            data: null, 
+            error: {
+              type: 'service_outage',
+              message: 'NASA API is currently experiencing a service outage. Please try again later.'
+            }
+          };
+        }
+        throw new Error(`Error fetching APOD for ${date}: ${res.status} ${res.statusText}`);
       }
       const apodData = await res.json();
 
       // Ensure the data is valid and meets the ApodData interface requirements
       if (!apodData.url || !apodData.title || !apodData.explanation) {
-        return null; // Skip this entry if any required field is missing
+        return { data: null }; // Skip this entry if any required field is missing
       }
 
       return {
-        title: apodData.title,
-        date: date,
-        url: getImageUrl(apodData.url, 800, 600),
-        explanation: apodData.explanation,
+        data: {
+          title: apodData.title,
+          date: date,
+          url: getImageUrl(apodData.url, 800, 600),
+          explanation: apodData.explanation,
+        }
       };
     } catch (error) {
-      console.error(`Error fetching APOD for ${date}:`, error);
-      return null;
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          data: null,
+          error: {
+            type: 'timeout',
+            message: 'Request timed out. The NASA API may be experiencing high load or connectivity issues.'
+          }
+        };
+      } else if (error instanceof Error && error.message.includes('fetch')) {
+        return {
+          data: null,
+          error: {
+            type: 'network',
+            message: 'Network error. Please check your internet connection.'
+          }
+        };
+      } else {
+        return {
+          data: null,
+          error: {
+            type: 'api_error',
+            message: 'Unable to fetch data from NASA API. Please try again later.'
+          }
+        };
+      }
     }
   };
 
-  // Fetch APODs for each date
-  const apods = await Promise.all(dates.map(fetchApod));
-  const validApods = apods.filter((apod): apod is ApodData => apod !== null);
+  const results = await Promise.all(dates.map(fetchApod));
+  const validApods = results
+    .map(r => r.data)
+    .filter((apod): apod is ApodData => apod !== null);
+  
+  const firstError = results.find(r => r.error)?.error;
 
-  return json<LoaderData>({ apods: validApods });
+  if (validApods.length === 0 && firstError) {
+    return json<LoaderData>({ 
+      apods: [{ ...DEMO_APOD_DATA, date: formatDate(new Date()) }],
+      error: firstError
+    });
+  }
+
+  return json<LoaderData>({ 
+    apods: validApods,
+    ...(firstError && { error: firstError })
+  });
 };

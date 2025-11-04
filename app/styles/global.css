@@ -39,4 +39,15 @@ html, body {
   .gradient-text {
     background-image: linear-gradient(180deg, var(--custom-red), var(--custom-orange), var(--custom-yellow));
   }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }

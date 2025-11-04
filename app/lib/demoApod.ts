@@ -1,0 +1,10 @@
+import { ApodData } from '../routes/apod-loader';
+import { formatDate } from './formatDate';
+
+export const DEMO_APOD_DATA: ApodData = {
+  title: 'A Double Helix Lunar Eclipse',
+  date: formatDate(new Date()),
+  url: '/assets/demo-lunar-eclipse.jpg',
+  explanation: 'The image was timed to capture a total lunar eclipse — but it came with quite a twist. First, the eclipse: the fully Earth-shadowed Moon is visible as the orange orb near the top. The eclipsed Moon\'s orange color is caused by a slight amount of red light scattered first by Earth\'s atmosphere, adding a color like a setting Sun. Now, the twist: one of the apparent double helix bands is the Milky Way, the central disk of our home galaxy. The second band is zodiacal light, sunlight scattered by dust in our Solar System. The reason they cross is because the plane where dust orbits our Sun is tilted relative to the plane where stars orbit our Galaxy. This well-known tilt is shown dramatically in the featured wide-angle Mercator-projected picture, spanning from horizon to horizon, captured in early September from Mingantu Observing Station in Inner Mongolia, China.'
+};
+
