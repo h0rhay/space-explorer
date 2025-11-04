@@ -14,19 +14,15 @@ import "./styles/apod_tile.css";
 import './styles/space_heading.css'
 
 export const links: LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
+  { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },
+  { rel: "dns-prefetch", href: "https://fonts.gstatic.com" },
   {
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Dosis:wght@300;400;500;600;700&display=swap",
   },
   {
     rel: "preload",
-    href: "/fonts/MachineStd-Bold.woff2",  // Update with your font path
+    href: "/fonts/MachineStd-Bold.woff2",
     as: "font",
     type: "font/woff2",
     crossOrigin: "anonymous"

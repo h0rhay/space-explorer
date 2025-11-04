@@ -77,7 +77,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout for faster SSR
       
       const res = await fetch(apiUrl, { 
         signal: controller.signal,
@@ -144,17 +144,52 @@ export const loader: LoaderFunction = async ({ request }) => {
     }
   };
 
-  const results = await Promise.all(dates.map(fetchApod));
-  const validApods = results
+  // Quick check: Try first request with a shorter timeout to detect service outages faster
+  const firstDate = dates[0];
+  const quickCheck = await fetchApod(firstDate);
+  
+  // If first request indicates service outage, return demo data immediately
+  if (quickCheck.error?.type === 'service_outage') {
+    return json<LoaderData>({ 
+      apods: [{ ...DEMO_APOD_DATA, date: formatDate(new Date()) }],
+      error: quickCheck.error
+    });
+  }
+
+  // Otherwise, fetch remaining dates in parallel
+  const remainingDates = dates.slice(1);
+  const remainingResults = remainingDates.length > 0 
+    ? await Promise.allSettled(remainingDates.map(fetchApod))
+    : [];
+
+  // Combine first result with remaining results
+  const allResults = [
+    { status: 'fulfilled' as const, value: quickCheck },
+    ...remainingResults
+  ].map(result => 
+    result.status === 'fulfilled' ? result.value : {
+      data: null,
+      error: {
+        type: 'api_error' as const,
+        message: 'Failed to fetch data from NASA API.'
+      }
+    }
+  );
+
+  const validApods = allResults
     .map(r => r.data)
     .filter((apod): apod is ApodData => apod !== null);
   
-  const firstError = results.find(r => r.error)?.error;
+  const firstError = allResults.find(r => r.error)?.error;
 
-  if (validApods.length === 0 && firstError) {
+  // If no valid APODs, return demo data immediately
+  if (validApods.length === 0) {
     return json<LoaderData>({ 
       apods: [{ ...DEMO_APOD_DATA, date: formatDate(new Date()) }],
-      error: firstError
+      error: firstError || {
+        type: 'api_error',
+        message: 'Unable to fetch data from NASA API. Showing demo content.'
+      }
     });
   }
 
