@@ -40,7 +40,7 @@ const SpaceFontHeading = ({ children }: { children: string }) => {
         <span className="absolute inset-0 text-transparent" style={{ textShadow: '-1px -1px 0 #22d3ee, 1px -1px 0 #22d3ee, -1px 1px 0 #22d3ee, 1px 1px 0 #22d3ee, -1px 0 0 #22d3ee, 1px 0 0 #22d3ee, 0 -1px 0 #22d3ee, 0 1px 0 #22d3ee' }}>
           {children}
         </span>
-        <span className="relative" style={{ backgroundImage: 'linear-gradient(180deg, #ef4444, #f97316, #fde047)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent', display: 'inline-block' }}>
+        <span className="relative" style={{ backgroundImage: 'linear-gradient(180deg, var(--custom-red), var(--custom-orange), var(--custom-yellow))', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent', display: 'inline-block' }}>
           {children}
         </span>
       </h1>
