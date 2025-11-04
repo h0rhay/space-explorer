@@ -21,7 +21,7 @@ const Toast: React.FC<ToastProps> = ({ message, title, onDismiss, autoDismissMs 
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0">
             <svg
-              className="w-5 h-5 text-custom-cyan"
+              className="w-7 h-7 text-yellow-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -36,10 +36,10 @@ const Toast: React.FC<ToastProps> = ({ message, title, onDismiss, autoDismissMs 
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-dosis font-semibold text-white mb-1">
+            <p className="text-base font-dosis font-semibold text-white mb-1">
               {title}
             </p>
-            <p className="text-xs font-dosis text-custom-cyan/80">
+            <p className="text-base font-dosis text-custom-cyan/80">
               {message}
             </p>
           </div>

@@ -36,8 +36,13 @@ const SpaceFontHeading = ({ children }: { children: string }) => {
 
   return (
     <div className="w-full text-center fixed top-0 left-0 z-50">
-      <h1 className="text-[clamp(3rem,6vw,8rem)] uppercase font-bold tracking-narrownpm run decoration-violet-50 font-MachineStd xtext-shadow-space-heading bg-clip-text text-fill-transparent gradient-text">
-        {children}
+      <h1 className="relative text-[clamp(3rem,6vw,8rem)] uppercase font-bold tracking-narrownpm run decoration-violet-50 font-MachineStd">
+        <span className="absolute inset-0 text-transparent" style={{ textShadow: '-1px -1px 0 #22d3ee, 1px -1px 0 #22d3ee, -1px 1px 0 #22d3ee, 1px 1px 0 #22d3ee, -1px 0 0 #22d3ee, 1px 0 0 #22d3ee, 0 -1px 0 #22d3ee, 0 1px 0 #22d3ee' }}>
+          {children}
+        </span>
+        <span className="relative" style={{ backgroundImage: 'linear-gradient(180deg, #ef4444, #f97316, #fde047)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent', display: 'inline-block' }}>
+          {children}
+        </span>
       </h1>
       <div className={isScrolled ? "animated" : ""}>
         <p>A simple app that uses a NASA API to fetch and display images from the Astronomy Picture of the Day.</p>
